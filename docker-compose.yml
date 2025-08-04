@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:18
+    image: postgres:16
     ports:
       - "5432:5432"
     environment:
@@ -11,16 +11,21 @@ services:
       - odoo-db-data:/var/lib/postgresql/data
 
   odoo:
-    image: odoo:18.0
+    build: .
+    container_name: odoo
+    env_file:
+      - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8069:8069"
     volumes:
       - odoo-web-data:/var/lib/odoo
-      - ./config:/etc/odoo
-      - ./addons:/mnt/extra-addons
-    command: odoo -d odoo_db -i base --db_user=odoo --db_password=odoo --db_host=db
+      - ./config/odoo.conf:/etc/odoo/odoo.conf
+      - ./core/addons:/mnt/addons
+      - ./enterprise-addons:/mnt/enterprise-addons
+    # command: odoo -d odoo_db -i base --db_user=odoo --db_password=odoo --db_host=db
 
   nginx:
     image: nginx:latest

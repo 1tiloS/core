@@ -1,24 +1,29 @@
-FROM python:3.13-slim-bookworm AS builder
+FROM odoo:18
 
-RUN apt-get update && apt-get install curl wget gnupg2 libreadline-dev inetutils-telnet -y \
-    && apt-get install -y --no-install-recommends gcc \
-    && apt-get clean
+USER root
 
-RUN apt-get update &&  \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt
+# Установка зависимостей
+RUN apt-get update && \
+    apt-get install -y \
+        libcups2-dev \
+        python3 \
+        build-essential \
+        libssl-dev \
+        libffi-dev \
+        dos2unix && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /src/requirements.txt
-WORKDIR /src
+# Создание директорий и установка прав
+RUN mkdir -p /var/lib/odoo /mnt/enterprise-addons && \
+    chown -R odoo:odoo /var/lib/odoo /mnt/enterprise-addons
 
-ARG PIP_CACHE_DIR
-ENV PIP_CACHE_DIR ${PIP_CACHE_DIR}
+# Копируем кастомный entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+# RUN dos2unix /entrypoint.sh && chmod +x /entrypoint.sh
+# Отладка: проверяем права
+RUN ls -l /entrypoint.sh
 
-RUN python -m pip install --upgrade pip
-RUN python -m pip install -r requirements.txt
-
-FROM builder
-COPY core /src/core
-
-EXPOSE 8069/tcp
-
-CMD ["/bin/bash","-c","python3 odoo-bin --addons-path=odoo/enterprise-addons -d odoo -r odoo -w odoo -i base"]
+# Устанавливаем entrypoint и команду по умолчанию
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["odoo"]
