@@ -1,0 +1,54 @@
+version: '3.1'
+services:
+
+  db:
+    container_name: db
+    image: postgres:15.1
+    environment:
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_USER=odoo
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - odoo-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odoo}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # networks:
+    #   odoo_lan:
+    #     ipv4_address: 127.0.0.3
+  odoo:
+    container_name: odoo
+    depends_on:
+      - db
+    build: .
+    volumes:
+      - odoo-web-data:/var/lib/odoo
+      # - ./entrypoint.sh:/entrypoint.sh
+      - ./config:/etc/odoo
+      - ./enterprise-addons:/mnt/extra-addons
+    environment:
+      HOST: db
+      PORT: 5432
+      USER: odoo
+      PASSWORD: odoo
+      DB_NAME: odoo
+      DB_FILTER: odoo
+    restart: always
+    # networks:
+    #   odoo_lan:
+    #     ipv4_address: 127.0.0.2
+
+networks:
+  odoo_lan:
+    driver: bridge
+    # ipam:
+    #   driver: default
+    #   config:
+    #     - subnet: 127.0.0.0/16
+
+volumes:
+  odoo-db-data:
+  odoo-web-data:
